@@ -1,23 +1,34 @@
 #!/bin/bash  -x
-if [ "$(uname -s)" == 'FreeBSD' ]; then
+if [ "$(uname -s)" -eq 'FreeBSD' ]; then
   OS='freebsd'
 elif [ -f "/etc/redhat-release" ]; then
   RHV=$(egrep -o 'Fedora|CentOS|Red.Hat' /etc/redhat-release)
+  VER=$(awk "{print $2}" /etc/redhat-release)
   case $RHV in
     Fedora)  OS='fedora';;
     CentOS)  OS='centos';;
    Red.Hat)  OS='redhat';;
   esac
 elif [ -f "/etc/debian_version" ]; then
-  OS=`echo -n Debian Version: && cat /etc/debian_version`
+  VER=$(awk "{print $1}" /etc/debian_version)
+  OS=`echo -n 'Debian'`
 fi
 
-echo "$OS"
-
 uname -a
-
+i=0
 # adrese ip
-ifconfig | awk 'BEGIN { FS = "\n"; RS = "" } { print $1 $2 }' | sed -e 's/ .*inet addr:/,/' -e 's/ .*//'
+# ifconfig | awk 'BEGIN { FS = "\n"; RS = "" } { print $1 $2 }' | sed -e 's/ .*inet addr:/,/' -e 's/ .*//'
+while true
+do
+ ifconfig eth$i|grep "inet addr:"|awk '{print $2}'|awk -F : '{print $2}'
+ if [ $? -ne 0 ]
+  then
+   i=$(($i+1))
+ else
+  break 
+ fi
+done
+
 
 
 # nume servicii
@@ -27,23 +38,21 @@ netstat -lp | cut -f2 -d'/' | awk '{print $1}'|grep -v -E '(avahi|Active|0|Progr
 alias="ABCOMUPTER"
 host="abccomputer.internal"
 ip="127.0.0.1"
-os="CentOS 5.0.2"
 eth0="192.168.1.1"
 eth1="172.16.20.25"
 serv="http"
-ver="2.2.4"
+verz="2.2.4"
 
 _csvout() {
-cat << EOF
+cat > system.csv << EOF
 Alias,Host,IP,OS Ver
-$alias,$host,$ip,$os
+$alias,$host,$ip,$OS $VER
 Iface,,,
 eth0,,$eth0,
 eth1,,$eth1,
 Service,,,
-$serv, $ver,,
+$serv,$verz,,
 EOF
   exit 1
   }
-  
-  _csvout()
+  _csvout
